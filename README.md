@@ -1,7 +1,5 @@
 # 📖 Truyện Audio
 
-Web đọc truyện online, hỗ trợ **đọc thành giọng nói (Text-to-Speech)**, giao diện SPA nhẹ, mượt, không loading giữa các trang. Tông màu sang trọng, chuyển sắc đen–trắng kết hợp điểm nhấn hồng.
-
 ## ✨ Tính năng
 
 - 📚 Đọc truyện online, giao diện tối giản, dễ dùng
