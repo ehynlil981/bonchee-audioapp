@@ -38,6 +38,11 @@ import Dashboard from './components/Dashboard'
 import UserCenter from './components/UserCenter'
 import Community from './components/Community'
 
+import SettingsButton from './components/SettingsButton'
+import GenreFilter from './components/GenreFilter'
+import TextReveal from './components/TextReveal'
+import { usePreferences } from './hooks/usePreferences'
+
 function App() {
   const { theme, setTheme } = useTheme()
   const { user, role, isAdmin, signOut } = useAuth()
@@ -78,6 +83,9 @@ function App() {
   const timerRef = useRef(null)
   const persistedReadingTimeRef = useRef(0)
   const routeBootedRef = useRef(false)
+
+  const { textMotion, setTextMotion } = usePreferences()
+  const [selectedGenres, setSelectedGenres] = useState([])
 
   useEffect(() => {
     localStorage.setItem('truyen-audio-3d-loader', String(loaderEnabled))
@@ -155,20 +163,46 @@ function App() {
     })
   }, [selectedStory, selectedChapter, readingTime, chapters, saveReadingSession])
 
-  const filteredStories = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
+const filteredStories = useMemo(() => {
+  const normalized = query.trim().toLowerCase()
 
-    return stories.filter((story) => {
-      const matches =
-        !normalized ||
-        story.ten?.toLowerCase().includes(normalized) ||
-        story.tac_gia?.toLowerCase().includes(normalized) ||
-        story.mo_ta?.toLowerCase().includes(normalized)
+  return stories.filter((story) => {
+    const matches =
+      !normalized ||
+      story.ten?.toLowerCase().includes(normalized) ||
+      story.tac_gia?.toLowerCase().includes(normalized) ||
+      story.mo_ta?.toLowerCase().includes(normalized)
 
-      if (activeTab === 'favorites') return matches && favorites.includes(story.id)
-      return matches
-    })
-  }, [stories, favorites, query, activeTab])
+    if (!matches) return false
+
+    if (activeTab === 'favorites' && !favorites.includes(story.id)) {
+      return false
+    }
+
+    // Multi genre
+    if (selectedGenres.length) {
+      const genreIds = Array.isArray(story.the_loai_ids)
+        ? story.the_loai_ids
+        : Array.isArray(story.genres)
+          ? story.genres.map((genre) => genre.id)
+          : []
+
+      const matchesGenres = selectedGenres.every((id) =>
+        genreIds.includes(id)
+      )
+
+      if (!matchesGenres) return false
+    }
+
+    return true
+  })
+}, [
+  stories,
+  favorites,
+  query,
+  activeTab,
+  selectedGenres,
+])
 
   const storyPath = (storyId, chapterNumber = null) =>
     chapterNumber ? `/truyen/${storyId}/chuong/${chapterNumber}` : `/truyen/${storyId}`
@@ -438,6 +472,13 @@ function App() {
           </nav>
 
           <div className="topbar-actions">
+            <SettingsButton
+              enable3DLoader={loaderEnabled}
+              onToggle3D={() => setLoaderEnabled((v) => !v)}
+              textMotion={textMotion}
+              onToggleTextMotion={() => setTextMotion((v) => !v)}
+              onOpenSettings={() => setUserCenterOpen(true)}
+            />
             {user ? (
               <div className="profile-anchor">
                 <button className="profile-button" onClick={() => setProfileOpen((v) => !v)}>
@@ -604,6 +645,8 @@ function App() {
                 {Array.from({ length: 6 }).map((_, index) => <div className="story-skeleton" key={index} />)}
               </div>
             ) : filteredStories.length ? (
+            <>
+              <GenreFilter value={selectedGenres} onChange={setSelectedGenres} />
               <div className="story-grid">
                 {filteredStories.map((story) => (
                   <StoryCard
@@ -615,6 +658,7 @@ function App() {
                   />
                 ))}
               </div>
+            </>
             ) : (
               <div className="empty-state library-empty">
                 <Search size={30} />
